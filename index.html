@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Frequency Generator</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Freq Gen">
+<meta name="theme-color" content="#f0ede8">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #f0ede8;
+    --surface:   #faf9f7;
+    --surface2:  #ede9e3;
+    --rule:      #d4cfc8;
+    --rule-dark: #b0a89e;
+    --text:      #1a1814;
+    --text-mid:  #6b645c;
+    --text-dim:  #a09890;
+    --red:       #c0392b;
+    --orange:    #c86820;
+    --radius:    10px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 44px 20px 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container { max-width: 780px; margin: 0 auto; }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--rule-dark);
+  }
+
+  .brand-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    font-size: 0.6rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  h1 {
+    font-weight: 300;
+    font-size: 1.65rem;
+    letter-spacing: -0.025em;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  h1 strong { font-weight: 500; }
+
+  /* Play button */
+  #toggleBtn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    background: var(--text);
+    color: #faf9f7;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.08s;
+    min-width: 86px;
+  }
+
+  #toggleBtn:hover  { background: #2e2a24; }
+  #toggleBtn:active { transform: scale(0.96); }
+  #toggleBtn.playing { background: var(--red); }
+  #toggleBtn.playing:hover { background: #a93226; }
+
+  /* Global bar */
+  .global-bar {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+
+  .global-cell {
+    padding: 13px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    border-right: 1px solid var(--rule);
+  }
+
+  .global-cell:last-child { border-right: none; flex: 1; }
+
+  .cell-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  select {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a09890' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0 center;
+  }
+
+  .vol-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #volDisplay {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text-mid);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  /* Sliders */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--rule-dark);
+    border-radius: 1px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1.75px solid var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+    transition: box-shadow 0.15s;
+    cursor: grab;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    box-shadow: 0 0 0 4px rgba(26,24,20,0.09), 0 1px 4px rgba(0,0,0,0.18);
+  }
+
+  input[type="range"].pan-slider::-webkit-slider-thumb { border-color: var(--orange); }
+  input[type="range"].vol-slider::-webkit-slider-thumb  { border-color: var(--text-mid); }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1.75px solid var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+    cursor: grab;
+  }
+
+  /* Tones grid */
+  .tones-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  @media (max-width: 540px) { .tones-grid { grid-template-columns: 1fr; } }
+
+  .tone {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .tone.active {
+    border-color: var(--rule-dark);
+    box-shadow: 0 0 0 1.5px rgba(26,24,20,0.2), var(--shadow-sm);
+  }
+
+  .tone-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 15px 10px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface2);
+  }
+
+  .tone-label-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tone-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-mid);
+  }
+
+  .freq-readout {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 300;
+    color: var(--text-mid);
+  }
+
+  .tone-body {
+    padding: 13px 15px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+  }
+
+  .control-row { display: flex; flex-direction: column; gap: 5px; }
+
+  .control-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .control-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.57rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .control-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-mid);
+  }
+
+  .pan-val { color: var(--orange); }
+
+  .freq-input-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+  }
+
+  input[type="number"] {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 300;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    padding: 5px 8px;
+    width: 80px;
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
+  input[type="number"]:focus { border-color: var(--rule-dark); }
+
+  .hz-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  /* Pan ticks */
+  .pan-ticks {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 2px;
+    margin-top: 2px;
+  }
+
+  .pan-tick {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  /* Toggle */
+  .toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+  .toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+  .toggle-track {
+    width: 28px; height: 16px;
+    background: var(--rule-dark);
+    border-radius: 16px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: white;
+    top: 3px; left: 3px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .toggle input:checked + .toggle-track { background: var(--text); }
+  .toggle input:checked + .toggle-track::after { transform: translateX(12px); }
+
+  /* Panels */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface2);
+  }
+
+  .panel-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-mid);
+  }
+
+  .panel-body { padding: 16px 18px; }
+
+  .sweep-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    align-items: flex-end;
+  }
+
+  .sweep-field { display: flex; flex-direction: column; gap: 5px; }
+
+  .sweep-field label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.57rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .sweep-field input[type="number"] { width: 85px; }
+
+  .inline-select {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    padding: 5px 24px 5px 9px;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a09890' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+
+  /* Canvas */
+  canvas {
+    width: 100%;
+    height: 90px;
+    display: block;
+    background: var(--surface);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div>
+      <p class="brand-eyebrow">Layered</p>
+      <h1>Frequency <strong>Generator</strong></h1>
+    </div>
+    <button id="toggleBtn">Play</button>
+  </header>
+
+  <div class="global-bar">
+    <div class="global-cell" style="flex:0 0 auto; min-width:140px;">
+      <span class="cell-label">Waveform</span>
+      <select id="waveform">
+        <option value="sine">Sine</option>
+        <option value="square">Square</option>
+        <option value="sawtooth">Sawtooth</option>
+        <option value="triangle">Triangle</option>
+      </select>
+    </div>
+    <div class="global-cell">
+      <div style="display:flex; justify-content:space-between;">
+        <span class="cell-label">Master Volume</span>
+        <span id="volDisplay">20%</span>
+      </div>
+      <div class="vol-row">
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.2" style="flex:1;">
+      </div>
+    </div>
+  </div>
+
+  <div class="tones-grid" id="toneContainer"></div>
+
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">Sweep — Tone 1</span></div>
+    <div class="panel-body">
+      <div class="sweep-fields">
+        <div class="sweep-field">
+          <label>Start</label>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <input type="number" id="sweepStart" value="20">
+            <span class="hz-unit">Hz</span>
+          </div>
+        </div>
+        <div class="sweep-field">
+          <label>End</label>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <input type="number" id="sweepEnd" value="20000">
+            <span class="hz-unit">Hz</span>
+          </div>
+        </div>
+        <div class="sweep-field">
+          <label>Duration</label>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <input type="number" id="sweepDuration" value="10" style="width:68px;">
+            <span class="hz-unit">s</span>
+          </div>
+        </div>
+        <div class="sweep-field">
+          <label>Curve</label>
+          <select id="sweepType" class="inline-select">
+            <option value="log">Logarithmic</option>
+            <option value="linear">Linear</option>
+          </select>
+        </div>
+        <div class="sweep-field">
+          <label>Mode</label>
+          <select id="sweepMode" class="inline-select">
+            <option value="off">Off</option>
+            <option value="loop">Loop</option>
+            <option value="bounce">Bounce</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">Spectrum Analyser</span></div>
+    <canvas id="visualiser"></canvas>
+  </div>
+
+</div>
+
+<script>
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+const MIN_FREQ = 1, MAX_FREQ = 22000;
+
+const masterGain = audioCtx.createGain();
+masterGain.gain.value = 0.2;
+
+const analyser = audioCtx.createAnalyser();
+analyser.fftSize = 4096;
+masterGain.connect(analyser);
+analyser.connect(audioCtx.destination);
+
+let oscillators = [];
+let isPlaying = false;
+let sweepTimer = null;
+let sweepDirection = 1;
+
+function sliderToFreq(v) {
+  const lo = Math.log10(MIN_FREQ), hi = Math.log10(MAX_FREQ);
+  return Math.pow(10, (v / 100) * (hi - lo) + lo);
+}
+
+function freqToSlider(f) {
+  const lo = Math.log10(MIN_FREQ), hi = Math.log10(MAX_FREQ);
+  return (Math.log10(Math.max(f, MIN_FREQ)) - lo) / (hi - lo) * 100;
+}
+
+function panLabel(v) {
+  if (Math.abs(v) < 0.02) return 'Centre';
+  return v < 0 ? `L ${Math.round(Math.abs(v)*100)}` : `R ${Math.round(v*100)}`;
+}
+
+const defaultFreqs = [440, 528, 174, 852];
+
+function buildTonePanel(i) {
+  const div = document.createElement('div');
+  div.className = 'tone' + (i === 1 ? ' active' : '');
+  div.id = `tonePanel${i}`;
+  const fInit = defaultFreqs[i - 1];
+
+  div.innerHTML = `
+    <div class="tone-header">
+      <div class="tone-label-group">
+        <label class="toggle">
+          <input type="checkbox" id="enable${i}" ${i===1?'checked':''}>
+          <span class="toggle-track"></span>
+        </label>
+        <span class="tone-name">Tone ${i}</span>
+      </div>
+      <span class="freq-readout" id="freqDisplay${i}">${fInit} Hz</span>
+    </div>
+    <div class="tone-body">
+
+      <div class="control-row">
+        <div class="control-meta">
+          <span class="control-name">Frequency</span>
+        </div>
+        <input type="range" class="freq-slider" id="slider${i}" min="0" max="100" value="${freqToSlider(fInit).toFixed(1)}">
+        <div class="freq-input-row">
+          <input type="number" id="freq${i}" value="${fInit}" min="1" max="22000">
+          <span class="hz-unit">Hz</span>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-meta">
+          <span class="control-name">Pan</span>
+          <span class="control-val pan-val" id="panDisplay${i}">Centre</span>
+        </div>
+        <input type="range" class="pan-slider" id="pan${i}" min="-1" max="1" step="0.01" value="0">
+        <div class="pan-ticks">
+          <span class="pan-tick">L</span>
+          <span class="pan-tick">·</span>
+          <span class="pan-tick">C</span>
+          <span class="pan-tick">·</span>
+          <span class="pan-tick">R</span>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-meta">
+          <span class="control-name">Volume</span>
+          <span class="control-val" id="toneVolDisplay${i}">80%</span>
+        </div>
+        <input type="range" class="vol-slider" id="toneVol${i}" min="0" max="1" step="0.01" value="0.8">
+      </div>
+
+    </div>
+  `;
+
+  div.querySelector(`#enable${i}`).addEventListener('change', e => {
+    div.classList.toggle('active', e.target.checked);
+  });
+
+  return div;
+}
+
+for (let i = 1; i <= 4; i++) {
+  document.getElementById('toneContainer').appendChild(buildTonePanel(i));
+}
+
+function createOscBundle(i) {
+  const freq = parseFloat(document.getElementById(`freq${i}`).value);
+  const pan  = parseFloat(document.getElementById(`pan${i}`).value);
+  const vol  = parseFloat(document.getElementById(`toneVol${i}`).value);
+
+  const osc      = audioCtx.createOscillator();
+  const panNode  = audioCtx.createStereoPanner();
+  const gainNode = audioCtx.createGain();
+
+  osc.type = document.getElementById('waveform').value;
+  osc.frequency.value = freq;
+  panNode.pan.value   = pan;
+  gainNode.gain.value = vol;
+
+  osc.connect(gainNode);
+  gainNode.connect(panNode);
+  panNode.connect(masterGain);
+  osc.start();
+
+  return { osc, panNode, gainNode, index: i };
+}
+
+function startAudio() {
+  oscillators = [];
+  for (let i = 1; i <= 4; i++) {
+    if (document.getElementById(`enable${i}`).checked) {
+      oscillators.push(createOscBundle(i));
+    }
+  }
+  startSweep();
+}
+
+function stopAudio() {
+  oscillators.forEach(o => { try { o.osc.stop(); } catch(e){} });
+  oscillators = [];
+  clearTimeout(sweepTimer);
+}
+
+document.getElementById('toggleBtn').addEventListener('click', async () => {
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  const btn = document.getElementById('toggleBtn');
+  if (!isPlaying) {
+    startAudio();
+    btn.textContent = 'Stop';
+    btn.classList.add('playing');
+  } else {
+    stopAudio();
+    btn.textContent = 'Play';
+    btn.classList.remove('playing');
+  }
+  isPlaying = !isPlaying;
+});
+
+for (let i = 1; i <= 4; i++) {
+  const ii = i;
+
+  document.getElementById(`slider${ii}`).addEventListener('input', e => {
+    const f = sliderToFreq(e.target.value);
+    document.getElementById(`freq${ii}`).value = Math.round(f);
+    document.getElementById(`freqDisplay${ii}`).textContent = Math.round(f) + ' Hz';
+    const o = oscillators.find(o => o.index === ii);
+    if (o) o.osc.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.01);
+  });
+
+  document.getElementById(`freq${ii}`).addEventListener('input', e => {
+    const f = Math.max(parseFloat(e.target.value) || 1, 1);
+    document.getElementById(`slider${ii}`).value = freqToSlider(f);
+    document.getElementById(`freqDisplay${ii}`).textContent = f + ' Hz';
+    const o = oscillators.find(o => o.index === ii);
+    if (o) o.osc.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.01);
+  });
+
+  document.getElementById(`pan${ii}`).addEventListener('input', e => {
+    const p = parseFloat(e.target.value);
+    document.getElementById(`panDisplay${ii}`).textContent = panLabel(p);
+    const o = oscillators.find(o => o.index === ii);
+    if (o) o.panNode.pan.setTargetAtTime(p, audioCtx.currentTime, 0.01);
+  });
+
+  document.getElementById(`toneVol${ii}`).addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    document.getElementById(`toneVolDisplay${ii}`).textContent = Math.round(v * 100) + '%';
+    const o = oscillators.find(o => o.index === ii);
+    if (o) o.gainNode.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+
+  document.getElementById(`enable${ii}`).addEventListener('change', e => {
+    if (!isPlaying) return;
+    if (e.target.checked) {
+      oscillators.push(createOscBundle(ii));
+    } else {
+      const idx = oscillators.findIndex(o => o.index === ii);
+      if (idx !== -1) {
+        try { oscillators[idx].osc.stop(); } catch(er){}
+        oscillators.splice(idx, 1);
+      }
+    }
+  });
+}
+
+document.getElementById('volume').addEventListener('input', e => {
+  masterGain.gain.setTargetAtTime(parseFloat(e.target.value), audioCtx.currentTime, 0.01);
+  document.getElementById('volDisplay').textContent = Math.round(e.target.value * 100) + '%';
+});
+
+document.getElementById('waveform').addEventListener('change', () => {
+  const type = document.getElementById('waveform').value;
+  oscillators.forEach(o => o.osc.type = type);
+});
+
+function startSweep() {
+  const mode = document.getElementById('sweepMode').value;
+  if (mode === 'off') return;
+  const start    = parseFloat(document.getElementById('sweepStart').value);
+  const end      = parseFloat(document.getElementById('sweepEnd').value);
+  const duration = parseFloat(document.getElementById('sweepDuration').value);
+  const type     = document.getElementById('sweepType').value;
+
+  function schedule() {
+    const tone = oscillators.find(o => o.index === 1);
+    if (!tone) return;
+    const from = sweepDirection === 1 ? start : end;
+    const to   = sweepDirection === 1 ? end   : start;
+    tone.osc.frequency.setValueAtTime(Math.max(from, 1), audioCtx.currentTime);
+    if (type === 'log') {
+      tone.osc.frequency.exponentialRampToValueAtTime(Math.max(to, 1), audioCtx.currentTime + duration);
+    } else {
+      tone.osc.frequency.linearRampToValueAtTime(to, audioCtx.currentTime + duration);
+    }
+    if (mode === 'loop')   sweepTimer = setTimeout(schedule, duration * 1000);
+    if (mode === 'bounce') { sweepDirection *= -1; sweepTimer = setTimeout(schedule, duration * 1000); }
+  }
+  schedule();
+}
+
+/* Spectrum */
+const canvas = document.getElementById('visualiser');
+const ctx    = canvas.getContext('2d');
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.offsetWidth  * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function draw() {
+  requestAnimationFrame(draw);
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.width, H = canvas.height;
+
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+
+  ctx.fillStyle = '#faf9f7';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle grid rules
+  ctx.strokeStyle = 'rgba(180,168,154,0.45)';
+  ctx.lineWidth = dpr;
+  [0.33, 0.66].forEach(y => {
+    ctx.beginPath(); ctx.moveTo(0, H*y); ctx.lineTo(W, H*y); ctx.stroke();
+  });
+
+  const count = Math.min(data.length, 512);
+  const bw    = W / count;
+
+  for (let i = 0; i < count; i++) {
+    const norm = data[i] / 255;
+    if (norm < 0.005) continue;
+    const h = norm * H;
+    ctx.fillStyle = `rgba(30, 26, 20, ${0.12 + norm * 0.82})`;
+    ctx.fillRect(i * bw, H - h, Math.max(bw - dpr * 0.5, 0.5), h);
+  }
+}
+draw();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed:', err));
+    });
+  }
+</script>
+</body>
+</html>
